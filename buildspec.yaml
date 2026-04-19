@@ -1,0 +1,31 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_REGION: us-east-1
+    ACCOUNT_ID: 534321188976
+    REPO_NAME: devops-task
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - ECR_URI=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+  build:
+    commands:
+      - echo Building Docker image...
+      - docker build -t $REPO_NAME .
+      - docker tag $REPO_NAME:latest $ECR_URI:latest
+
+  post_build:
+    commands:
+      - echo Pushing Docker image to ECR...
+      - docker push $ECR_URI:latest
+      - echo Creating imagedefinitions.json...
+      - printf '[{"name":"devops-container","imageUri":"%s"}]' $ECR_URI:latest > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
